@@ -13,6 +13,7 @@ function Register() {
 
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleChange = (e) => {
     setFormData({
@@ -23,7 +24,6 @@ function Register() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
     setMessage("");
     setLoading(true);
 
@@ -35,15 +35,13 @@ function Register() {
 
       setMessage(response.data.message);
 
-      // Move to login after successful registration
       setTimeout(() => {
         navigate("/login");
       }, 1000);
-
     } catch (error) {
       setMessage(
         error.response?.data?.message ||
-        "Registration failed"
+          "Registration failed"
       );
     } finally {
       setLoading(false);
@@ -52,59 +50,98 @@ function Register() {
 
   return (
     <div className="auth-container">
+      <div className="auth-stars" />
+      <div className="auth-network auth-network-left" />
+      <div className="auth-network auth-network-right" />
+      <div className="auth-mountains" />
+
+      <div className="auth-brand">
+        <div className="auth-brand-mark">⌁</div>
+        {/* <h1>
+          Smart<span>RAG</span>
+        </h1> */}
+        {/* <p>Smarter Document Search&nbsp; • &nbsp;Powered by AI</p> */}
+      </div>
+
       <div className="auth-card">
-
-        <h1>Smart PDF RAG</h1>
-
         <h2>Create Account</h2>
+        <p className="auth-subtitle">
+          Start learning from your documents with AI
+        </p>
 
         {message && (
-          <p className="message">{message}</p>
+          <p className="message">
+            {message}
+          </p>
         )}
 
         <form onSubmit={handleSubmit}>
+          <div className="auth-field">
+            <span className="auth-field-icon">♙</span>
+            <input
+              type="text"
+              name="name"
+              placeholder="Full Name"
+              value={formData.name}
+              onChange={handleChange}
+              required
+            />
+          </div>
 
-          <input
-            type="text"
-            name="name"
-            placeholder="Full Name"
-            value={formData.name}
-            onChange={handleChange}
-            required
-          />
+          <div className="auth-field">
+            <span className="auth-field-icon">✉</span>
+            <input
+              type="email"
+              name="email"
+              placeholder="Email Address"
+              value={formData.email}
+              onChange={handleChange}
+              required
+            />
+          </div>
 
-          <input
-            type="email"
-            name="email"
-            placeholder="Email Address"
-            value={formData.email}
-            onChange={handleChange}
-            required
-          />
+          <div className="auth-field password-field">
+            <span className="auth-field-icon">♙</span>
+            <input
+              type={showPassword ? "text" : "password"}
+              name="password"
+              placeholder="Password"
+              value={formData.password}
+              onChange={handleChange}
+              required
+            />
 
-          <input
-            type="password"
-            name="password"
-            placeholder="Password"
-            value={formData.password}
-            onChange={handleChange}
-            required
-          />
+            <button
+              type="button"
+              className="show-password-button"
+              onClick={() => setShowPassword(!showPassword)}
+              aria-label={
+                showPassword ? "Hide password" : "Show password"
+              }
+            >
+              {showPassword ? "Hide" : "Show"}
+            </button>
+          </div>
 
-          <button type="submit" disabled={loading}>
+          <button
+            type="submit"
+            className="auth-submit-button"
+            disabled={loading}
+          >
             {loading ? "Creating Account..." : "Register"}
           </button>
-
         </form>
 
-        <p>
+        <p className="auth-switch">
           Already have an account?{" "}
-          <Link to="/login">
-            Login
-          </Link>
+          <Link to="/login">Login</Link>
         </p>
-
       </div>
+
+      <div className="auth-floating-dot dot-one" />
+      <div className="auth-floating-dot dot-two" />
+      <div className="auth-floating-dot dot-three" />
+      <div className="auth-floating-dot dot-four" />
     </div>
   );
 }

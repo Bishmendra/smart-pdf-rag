@@ -12,18 +12,21 @@ const {
   embedChunks,
 } = require("../services/embeddingService");
 
-const processDocument = async (req, res) => {
-  try {
-    const userId = req.user.id;
-    const documentId = req.params.id;
+const {
+  upsertEmbeddings,
+} = require("../services/vectorService");
 
-    // Find document belonging to logged-in user
+const processDocument = async (req, res) => {
+  const documentId = req.params.id;
+  const userId = req.user.id;
+
+  try {
+    // 1. Get document
     const [documents] = await db.query(
       `
       SELECT *
       FROM documents
-      WHERE id = ?
-      AND user_id = ?
+      WHERE id = ? AND user_id = ?
       `,
       [documentId, userId]
     );
@@ -37,7 +40,22 @@ const processDocument = async (req, res) => {
 
     const document = documents[0];
 
-    // Set status to processing
+    // 2. Prevent duplicate processing
+    if (document.status === "processing") {
+      return res.status(409).json({
+        success: false,
+        message: "This PDF is already being processed",
+      });
+    }
+
+    if (document.status === "processed") {
+      return res.status(409).json({
+        success: false,
+        message: "This PDF has already been processed",
+      });
+    }
+
+    // 3. Set processing status
     await db.query(
       `
       UPDATE documents
@@ -47,48 +65,64 @@ const processDocument = async (req, res) => {
       ["processing", documentId]
     );
 
-    // Extract PDF text
+    console.log(
+      `Processing document ${documentId}...`
+    );
+
+    // 4. Extract PDF text
     const pdfData =
       await extractTextFromPDF(
         document.file_path
       );
 
-    // Check extracted text
     if (
-  !pdfData.text ||
-  pdfData.text.trim().length === 0
-) {
-  await db.query(
-    `
-    UPDATE documents
-    SET status = ?
-    WHERE id = ?
-    `,
-    ["failed", documentId]
-  );
+      !pdfData.text ||
+      pdfData.text.trim().length === 0
+    ) {
+      throw new Error(
+        "No readable text found in PDF"
+      );
+    }
 
-  return res.status(400).json({
-    success: false,
-    message:
-      "No readable text was found in this PDF.",
-  });
-}
+    console.log(
+      `Extracted ${pdfData.text.length} characters`
+    );
 
-    // Create chunks
-    const chunks =
-  chunkText(pdfData.text).map(
-    (chunk) => ({
-      userId,
-      documentId: document.id,
-      chunkIndex: chunk.chunkIndex,
-      text: chunk.text,
-    })
-  );
+    // 5. Chunk text
+    const chunks = chunkText(
+      pdfData.text
+    );
 
-      // Generate embeddings
+    if (chunks.length === 0) {
+      throw new Error(
+        "No chunks generated from PDF"
+      );
+    }
+
+    console.log(
+      `Generated ${chunks.length} chunks`
+    );
+
+    // 6. Add metadata
+    const chunksWithMetadata =
+      chunks.map((chunk) => ({
+        ...chunk,
+        userId,
+        documentId: Number(documentId),
+      }));
+
+    // 7. Generate embeddings
     const embeddedChunks =
-  await embedChunks(chunks);
-    // Update status
+      await embedChunks(
+        chunksWithMetadata
+      );
+
+    // 8. Store vectors
+    await upsertEmbeddings(
+      embeddedChunks
+    );
+
+    // 9. Mark document as processed
     await db.query(
       `
       UPDATE documents
@@ -98,9 +132,14 @@ const processDocument = async (req, res) => {
       ["processed", documentId]
     );
 
-    // Return processing information
-    res.json({
+    console.log(
+      `Document ${documentId} processed successfully`
+    );
+
+    // 10. Send response
+    return res.json({
       success: true,
+
       message:
         "PDF processed successfully",
 
@@ -108,19 +147,22 @@ const processDocument = async (req, res) => {
         id: document.id,
         name: document.original_name,
         pages: pdfData.numberOfPages,
-        characters: pdfData.text.length,
-        chunks: chunks.length,
+        characters:
+          pdfData.text.length,
+        chunks:
+          embeddedChunks.length,
       },
     });
+
   } catch (error) {
+
     console.error(
       "Document Processing Error:",
       error
     );
 
+    // Mark processing as failed
     try {
-      const documentId = req.params.id;
-
       await db.query(
         `
         UPDATE documents
@@ -136,9 +178,10 @@ const processDocument = async (req, res) => {
       );
     }
 
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       message:
+        error.message ||
         "Failed to process PDF",
     });
   }

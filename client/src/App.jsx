@@ -2,27 +2,23 @@ import {
   BrowserRouter,
   Routes,
   Route,
-  Navigate,
 } from "react-router-dom";
 
+import Home from "./pages/Home";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
+import Chat from "./pages/Chat";
+import Quiz from "./pages/Quiz";
+
 import ProtectedRoute from "./components/ProtectedRoute";
 
-function App() {
+const App = () => {
   return (
     <BrowserRouter>
 
       <Routes>
 
-        {/* Default Route */}
-        <Route
-          path="/"
-          element={<Navigate to="/login" replace />}
-        />
-
-        {/* Authentication Routes */}
         <Route
           path="/login"
           element={<Login />}
@@ -33,7 +29,15 @@ function App() {
           element={<Register />}
         />
 
-        {/* Protected Dashboard */}
+        <Route
+          path="/"
+          element={
+            <ProtectedRoute>
+              <Home />
+            </ProtectedRoute>
+          }
+        />
+
         <Route
           path="/dashboard"
           element={
@@ -43,10 +47,28 @@ function App() {
           }
         />
 
+        <Route
+          path="/chat/:documentId"
+          element={
+            <ProtectedRoute>
+              <Chat />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/quiz/:documentId"
+          element={
+            <ProtectedRoute>
+              <Quiz />
+            </ProtectedRoute>
+          }
+        />
+
       </Routes>
 
     </BrowserRouter>
   );
-}
+};
 
 export default App;

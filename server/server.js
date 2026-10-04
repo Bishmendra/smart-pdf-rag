@@ -6,6 +6,12 @@ const db = require("./config/db");
 
 const authRoutes = require("./routes/authRoutes");
 const documentRoutes = require("./routes/documentRoutes");
+const quizRoutes = require(
+  "./routes/quizRoutes"
+);
+
+const chatRoutes =
+  require("./routes/chatRoutes");
 
 const protect = require("./middleware/authMiddleware");
 
@@ -21,6 +27,10 @@ app.use(cors());
 app.use(express.json());
 
 
+app.use(
+  "/api/quiz",
+  quizRoutes
+);
 // ===============================
 // BASIC ROUTE
 // ===============================
@@ -81,6 +91,10 @@ app.use(
   documentRoutes
 );
 
+app.use(
+  "/api/chat",
+  chatRoutes
+);
 
 // ===============================
 // PROTECTED TEST ROUTE
